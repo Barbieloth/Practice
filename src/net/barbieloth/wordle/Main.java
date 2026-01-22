@@ -14,7 +14,7 @@ public class Main {
             String choise = sc.nextLine();
 
             switch (choise){
-                case "1": openSetting(sc); break;
+                case "1": startGame(sc); break;
                 case "2": openSetting(sc); break;
                 case "3": System.exit(0); break;
                 default: System.out.println("Невірний вибір!");
@@ -49,6 +49,26 @@ public class Main {
         }
     }
 
+    public static void startGame(Scanner sc) {
+        List<String> history =  new ArrayList<>();
+
+        while (true) {
+
+
+            System.out.println("====== WORDLE ======");
+
+            for (String row : history) {
+                System.out.println(row);
+            }
+            for (int i = history.size(); i < maxAttempts; i++) {
+                System.out.println("\u001B[48;5;240m   \u001B[0m ".repeat(5));
+            }
+            System.out.println("====================\n");
+
+            String words = "";
+            words = sc.nextLine();
+        }
+    }
 
 
 
