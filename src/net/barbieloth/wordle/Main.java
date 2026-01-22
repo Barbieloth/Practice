@@ -8,11 +8,6 @@ public class Main {
 
     private static final String SECRET_WORD = "apple";
 
-    public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_GREEN_BG = "\u001B[42m";
-    public static final String ANSI_YELLOW_BG = "\u001B[43m";
-    public static final String ANSI_GRAY_BG = "\u001B[100m";
-
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
 
