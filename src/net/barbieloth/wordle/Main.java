@@ -58,25 +58,32 @@ public class Main {
     }
 
     private static void openSetting(Scanner sc){
-        while(true){
+        while(true) {
             System.out.println("\n--- Налаштування --- ");
             System.out.println("1. Довжина слова (5-8, зараз: " + wordLenght + ")");
             System.out.println("2. Макс.спроб (зараз: " + maxAttempts + ")");
             System.out.println("3. Вихід в головне меню");
-            String choise = sc.nextLine();
-            if (choise.equals("1")){
-                System.out.print("Введіть нову довжину: ");
-                wordLenght = Integer.parseInt(sc.nextLine());
-            } else if (choise.equals("2")){
-                System.out.print("Введіть нову кількість спроб: ");
-                maxAttempts = Integer.parseInt(sc.nextLine());
-            } else if (choise.equals("3")) break;
-        }
+            System.out.print("Оберіть опцію: ");
+
+            try {
+                String choise = sc.nextLine();
+                if (choise.equals("1")) {
+                    System.out.print("Введіть нову довжину: ");
+                    wordLenght = Integer.parseInt(sc.nextLine());
+                } else if (choise.equals("2")) {
+                    System.out.print("Введіть нову кількість спроб: ");
+                    maxAttempts = Integer.parseInt(sc.nextLine());
+                } else if (choise.equals("3")) break;
+                } catch (NumberFormatException e) {System.out.println("Помилка: введіть число!");}
+            }
+    }
+
+    private static void clearConsole() {
+        System.out.println(new String(new char[50]).replace("\0", "\r\n"));
     }
 
     private static void drawGrid(List<String> history) {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
+        clearConsole();
         System.out.println("====== WORDLE ======");
 
         for (String row : history) {
@@ -128,20 +135,38 @@ public class Main {
     }
 
     private static String checkWord(String guess, String secret) {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < guess.length(); i++) {
-            char c = guess.charAt(i);
-            if (c == secret.charAt(i)) {
-                result.append(ANSI_GREEN_BG).append(" ").append(c).append(" ").append(ANSI_RESET);
-            } else if (secret.contains(String.valueOf(c))) {
-                result.append(ANSI_YELLOW_BG).append(" ").append(c).append(" ").append(ANSI_RESET);
-            } else {
-                result.append(ANSI_GRAY_BG).append(" ").append(c).append(" ").append(ANSI_RESET);
+        int len = guess.length();
+        String[] result = new String[len];
+        boolean[] secretUsed = new boolean[len];
+        boolean[] guessUsed = new boolean[len];
+
+        for (int i = 0; i < len; i++) {
+            if (guess.charAt(i) == secret.charAt(i)) {
+                result[i] = ANSI_GREEN_BG + " " + guess.charAt(i) + " " + ANSI_RESET;
+                secretUsed[i] = true;
+                guessUsed[i] = true;
             }
-            result.append(" ");
         }
-        return result.toString();
+
+        for (int i = 0; i < len; i++) {
+            if (guessUsed[i]) continue;
+
+            for (int j = 0; j < len; j++) {
+                if (!secretUsed[j] && guess.charAt(i) == secret.charAt(j)) {
+                    result[i] = ANSI_YELLOW_BG + " " + guess.charAt(i) + " " + ANSI_RESET;
+                    secretUsed[j] = true;
+                    guessUsed[i] = true;
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < len; i++) {
+            if (result[i] == null) {
+                result[i] = ANSI_GRAY_BG + " " + guess.charAt(i) + " " + ANSI_RESET;
+            }
+        }
+
+        return String.join(" ", result);
     }
-
-
 }
