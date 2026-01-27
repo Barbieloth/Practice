@@ -1,8 +1,11 @@
 package net.barbieloth.wordle;
 
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-public class Main {
+public class Wordle {
     private static int wordLenght = 5;
     private static int maxAttempts = 6;
     private static String secretWord;
@@ -31,8 +34,15 @@ public class Main {
     public static final String ANSI_YELLOW_BG = "\u001B[43m";
     public static final String ANSI_GRAY_BG = "\u001B[100m";
 
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
+    public static void main(String[] args) throws IOException, InterruptedException {
+
+        if (System.getProperty("os.name").contains("Windows")) {
+            new ProcessBuilder("cmd", "/c", "chcp 65001 > nul").inheritIO().start().waitFor();
+        }
+
+        System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+
+        Scanner sc = new Scanner(System.in, StandardCharsets.UTF_8);
 
         while (true){
             showMainMenu();
@@ -41,7 +51,10 @@ public class Main {
             switch (choise){
                 case "1": startGame(sc); break;
                 case "2": openSetting(sc); break;
-                case "3": System.exit(0); break;
+                case "3": {
+                    System.out.println("Бувай!");
+                    System.exit(0);
+                }
                 default: System.out.println("Невірний вибір!");
             }
         }
@@ -49,24 +62,31 @@ public class Main {
 
     }
 
-    private static void showMainMenu(){
-        System.out.println("\n--- WORLDE --- ");
-        System.out.println("1. Старт");
-        System.out.println("2. Налаштування");
-        System.out.println("3. Вихід");
+    private static void showMainMenu() {
+        clearConsole();
+        System.out.println("╔════════════════════════╗");
+        System.out.println("║         WORDLE         ║");
+        System.out.println("╠════════════════════════╣");
+        System.out.println("║ 1. Старт               ║");
+        System.out.println("║ 2. Налаштування        ║");
+        System.out.println("║ 3. Вихід               ║");
+        System.out.println("╚════════════════════════╝");
         System.out.print("Оберіть опцію: ");
     }
 
     private static void openSetting(Scanner sc){
         while(true) {
-            System.out.println("\n--- Налаштування --- ");
-            System.out.println("1. Довжина слова (5-8, зараз: " + wordLenght + ")");
-            System.out.println("2. Макс.спроб (зараз: " + maxAttempts + ")");
-            System.out.println("3. Вихід в головне меню");
+            System.out.println("╔════════════════════════╗");
+            System.out.println("║      НАЛАШТУВАННЯ      ║");
+            System.out.println("╠════════════════════════╣");
+            System.out.println("║ 1. Довжина слова   <" + wordLenght + "> ║");
+            System.out.println("║ 2. Макс.спроб      <" + maxAttempts + "> ║");
+            System.out.println("║ 3. Вихід в меню        ║");
+            System.out.println("╚════════════════════════╝");
             System.out.print("Оберіть опцію: ");
 
+            String choise = sc.nextLine();
             try {
-                String choise = sc.nextLine();
                 if (choise.equals("1")) {
                     System.out.print("Введіть нову довжину: ");
                     wordLenght = Integer.parseInt(sc.nextLine());
@@ -74,31 +94,33 @@ public class Main {
                     System.out.print("Введіть нову кількість спроб: ");
                     maxAttempts = Integer.parseInt(sc.nextLine());
                 } else if (choise.equals("3")) break;
-                } catch (NumberFormatException e) {System.out.println("Помилка: введіть число!");}
-            }
+            } catch (NumberFormatException e) {System.out.println("Помилка: введіть число!");}
+        }
     }
 
     private static void clearConsole() {
-        System.out.println(new String(new char[50]).replace("\0", "\r\n"));
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
     }
 
     private static void drawGrid(List<String> history) {
         clearConsole();
-        System.out.println("====== WORDLE ======");
+        System.out.println("         WORDLE");
+        System.out.println("═══════════════════════");
 
         for (String row : history) {
-            System.out.println(row);
+            System.out.println("  " +row);
         }
 
-        String graySquare = "\u001B[100m   \u001B[0m ";
+        String graySquare = ANSI_GRAY_BG + " . " + ANSI_RESET + " ";
         for (int i = history.size(); i < maxAttempts; i++) {
+            System.out.print("  ");
             for (int j = 0; j < wordLenght; j++) System.out.print(graySquare);
             System.out.println();
         }
-        System.out.println("===================");
+        System.out.println("═══════════════════════");
     }
     private static void startGame(Scanner scanner) {
-
         String[] words = DICTIONARY.get(wordLenght);
         secretWord = words[new Random().nextInt(words.length)];
 
@@ -107,12 +129,16 @@ public class Main {
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             drawGrid(history);
-            System.out.print("Введіть ваше слово (Спроба " + attempt + " з " + maxAttempts + "): ");
+            System.out.println("Спроба " + attempt + " з " + maxAttempts);
+            System.out.print("Введіть слово: ");
 
             String guess = scanner.nextLine().toUpperCase();
 
+            if (guess.equals("DEBUG")) {System.exit(0);}
+
             if (guess.length() != wordLenght) {
-                System.out.println("Помилка! Довжина слова має бути " + wordLenght);
+                System.out.println("Помилка! Довжина слова має бути " + wordLenght + "літер! Натисніть Enter..." );
+                scanner.nextLine();
                 attempt--;
                 continue;
             }
@@ -122,16 +148,18 @@ public class Main {
 
             if (guess.equals(secretWord)) {
                 isWon = true;
-                drawGrid(history);
-                System.out.println("ПЕРЕМОГА! Вгадано за спроб: " + attempt);
                 break;
             }
         }
 
-        if (!isWon) {
-            drawGrid(history);
+        drawGrid(history);
+        if (isWon) {
+            System.out.println("ПЕРЕМОГА!");
+        } else {
             System.out.println("ПРОГРАШ! Загадане слово було: " + secretWord);
         }
+        System.out.println("Натисніть Enter, щоб вийти в меню...");
+        scanner.nextLine();
     }
 
     private static String checkWord(String guess, String secret) {
