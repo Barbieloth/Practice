@@ -4,30 +4,16 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 
 public class Wordle {
     private static int wordLenght = 5;
     private static int maxAttempts = 6;
     private static String secretWord;
 
-    private static final Map<Integer, String[]> DICTIONARY = Map.of(
-            5, new String[]{
-                    "АЛМАЗ", "БАГАТ", "ВІДЕО", "ГРОШІ", "ВИШНЯ", "ЕКРАН", "ЖИТТЯ", "ЗЕМЛЯ", "ІГРОК", "КНИГА",
-                    "ЛИМОН", "МЕТРО", "НАЗВА", "ОКЕАН", "ПІСНЯ", "РАНОК", "СЛОТЬ", "ТЕКСТ", "УВАГА", "ФОТОС"
-            },
-            6, new String[]{
-                    "БАЛКОН", "ВЕКТОР", "ГРАФІК", "ДРАКОН", "КОПИТО", "ЖУРНАЛ", "ЗИМОВИ", "ІСТОРІ", "КАВУНИ", "ЛИСТОК",
-                    "МАГНІТ", "НЕБОСХ", "ОБЛИЧЧ", "ПЛАНЕТ", "РОБОТА", "СТЕЖКА", "ТАЛАНТ", "УСМІШК", "ФУТБОЛ", "ХМАРИН"
-            },
-            7, new String[]{
-                    "АВТОБУС", "БУДИНОК", "ВИТРАТИ", "ГРОМАДА", "ДЖЕРЕЛО", "ЕКЗАМЕН", "ЗАПИСКИ", "ІГРАШКА", "КАРТИНА", "ЛЮДСТВО",
-                    "МОМЕНТИ", "НАПИСИ", "ОСТРОВИ", "ПРИГОДА", "РЕЦЕПТИ", "СИСТЕМА", "ТЕЛЕФОН", "УЧИТЕЛЬ", "ФОРМАТИ", "ГОРБУША"
-            },
-            8, new String[]{
-                    "АКАДЕМІЯ", "БЕРЕЗЕНЬ", "ВІДПУСТК", "ГОРИЗОНТ", "ДОПОМОГА", "ЕЛЕМЕНТИ", "ЖИВОПИСЬ", "ЗВ'ЯЗОК", "ІНТЕРНЕТ", "КОМП'ЮТЕ",
-                    "ЛІТЕРАТУ", "МАГАЗИНИ", "НАВЧАННЯ", "ОПЕРАЦІЯ", "ПРОГРАМА", "РЕЗУЛЬТА", "СТОРІНКА", "ТЕХНІКА", "УКРАЇНА", "ФАНТАЗІЯ"
-            }
-    );
+    private static final Map<Integer, List<String>> DICTIONARY = new HashMap<>();
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN_BG = "\u001B[42m";
@@ -36,15 +22,18 @@ public class Wordle {
 
     public static void main(String[] args) throws IOException, InterruptedException {
 
-        if (System.getProperty("os.name").contains("Windows")) {
+        loadDictionary("words.txt");
+
+         if (System.getProperty("os.name").contains("Windows")) {
             new ProcessBuilder("cmd", "/c", "chcp 65001 > nul").inheritIO().start().waitFor();
-        }
+         }
 
         System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
 
         Scanner sc = new Scanner(System.in, StandardCharsets.UTF_8);
 
         while (true){
+            clearConsole();
             showMainMenu();
             String choise = sc.nextLine();
 
@@ -76,6 +65,7 @@ public class Wordle {
 
     private static void openSetting(Scanner sc){
         while(true) {
+            clearConsole();
             System.out.println("╔════════════════════════╗");
             System.out.println("║      НАЛАШТУВАННЯ      ║");
             System.out.println("╠════════════════════════╣");
@@ -93,7 +83,7 @@ public class Wordle {
                 } else if (choise.equals("2")) {
                     System.out.print("Введіть нову кількість спроб: ");
                     maxAttempts = Integer.parseInt(sc.nextLine());
-                } else if (choise.equals("3")) break;
+                }  else if (choise.equals("3")) break;
             } catch (NumberFormatException e) {System.out.println("Помилка: введіть число!");}
         }
     }
@@ -105,24 +95,45 @@ public class Wordle {
 
     private static void drawGrid(List<String> history) {
         clearConsole();
-        System.out.println("         WORDLE");
-        System.out.println("═══════════════════════");
+        int contentWidth = (wordLenght * 3) + (wordLenght - 1);
+        int totalWidth = contentWidth + 4;
+        String line = "═".repeat(totalWidth);
+
+        System.out.println("╔" + line + "╗");
+
+        String title = "WORDLE";
+        int padding = (totalWidth - title.length()) / 2;
+        System.out.println("║" + " ".repeat(padding) + title + " ".repeat(totalWidth - title.length() - padding) + "║");
+
+        System.out.println("╠" + line + "╣");
 
         for (String row : history) {
-            System.out.println("  " +row);
+            System.out.println("║  " + row + "  ║");
         }
 
-        String graySquare = ANSI_GRAY_BG + " . " + ANSI_RESET + " ";
+        String graySquare = ANSI_GRAY_BG + " . " + ANSI_RESET;
         for (int i = history.size(); i < maxAttempts; i++) {
-            System.out.print("  ");
-            for (int j = 0; j < wordLenght; j++) System.out.print(graySquare);
-            System.out.println();
+            System.out.print("║  ");
+            for (int j = 0; j < wordLenght; j++) {
+                System.out.print(graySquare);
+                if (j < wordLenght - 1) System.out.print(" ");
+            }
+            System.out.println("  ║");
         }
-        System.out.println("═══════════════════════");
+
+        System.out.println("╚" + line + "╝");
     }
+
+
     private static void startGame(Scanner scanner) {
-        String[] words = DICTIONARY.get(wordLenght);
-        secretWord = words[new Random().nextInt(words.length)];
+        List<String> words = DICTIONARY.get(wordLenght);
+        if (words == null || words.isEmpty()) {
+            System.out.println("Слів такої довжини не знайдено! Натисніть Enter...");
+            scanner.nextLine();
+            return;
+        }
+
+        secretWord = words.get(new Random().nextInt(words.size()));
 
         List<String> history = new ArrayList<>();
         boolean isWon = false;
@@ -196,5 +207,14 @@ public class Wordle {
         }
 
         return String.join(" ", result);
+    }
+    public static void loadDictionary(String filename) throws IOException {
+        List<String> lines = Files.readAllLines(Paths.get(filename), StandardCharsets.UTF_8);
+        for (String word : lines) {
+            word = word.trim().toUpperCase();
+            if (word.isEmpty()) continue;
+
+            DICTIONARY.computeIfAbsent(word.length(), k -> new ArrayList<>()).add(word);
+        }
     }
 }
